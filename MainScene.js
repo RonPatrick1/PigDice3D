@@ -92,10 +92,19 @@ function mainScene() {
     var boxRestitution=.7;
     var groundFriction=.99;
     var groundRestitution=.6;
+
     var textureLoader = new THREE.TextureLoader();
     var displacementMap = textureLoader.load( "displacement.jpg" );
     var normalMap = textureLoader.load( "normal.jpg" );
     var aoMap = textureLoader.load( "ao.jpg" );
+    var path = "textures/cube/SwedishRoyalCastle/";
+    var format = '.jpg';
+    var urls = [
+        path + 'px' + format, path + 'nx' + format,
+        path + 'py' + format, path + 'ny' + format,
+        path + 'pz' + format, path + 'nz' + format
+    ];
+    var reflectionCube = new THREE.CubeTextureLoader().load( urls );
 
     init();
     animate();
@@ -155,7 +164,7 @@ function mainScene() {
             }
         }
         waitSome();
-        g_Geometry.
+        //g_Geometry.
         //alert("faces: "+geometry2.faces.length);
         //var geometry3=new THREE.Geometry();
         //geometry3.fromBufferGeometry(geometry);
@@ -201,6 +210,16 @@ function mainScene() {
             }
         );
         scene.fog = new THREE.Fog(0x000000, 250, 1400);
+
+        /*var pointLight = new THREE.PointLight( 0xff0000, 0.5 );
+        pointLight.position.z = 2500;
+        scene.add( pointLight );
+        var pointLight2 = new THREE.PointLight( 0xff6666, 1 );
+        camera.add( pointLight2 );
+        var pointLight3 = new THREE.PointLight( 0x0000ff, 0.5 );
+        pointLight3.position.x = - 1000;
+        pointLight3.position.z = 1000;
+        scene.add( pointLight3 );*/
 
         // LIGHTS
 
@@ -720,7 +739,16 @@ function mainScene() {
 
         group.rotation.y += ( targetRotation - group.rotation.y ) * 0.05;
 
-        camera.lookAt(cameraTarget);
+        var targ = new THREE.Vector3(0, 150, 0);
+        if(box[boxIndex-1]) {
+            if(box[boxIndex-1].position.y<480) {
+                targ.x=box[boxIndex-1].position.x;
+                targ.y=box[boxIndex-1].position.y;
+                targ.z=box[boxIndex-1].position.z;
+            }
+        }
+        camera.lookAt(targ);
+        console.log("changed lookAt");
         scene.simulate();
         groundMirror.render();
         /*for($i=0;$i<box2.length;$i++) {
@@ -744,33 +772,26 @@ function mainScene() {
 
     }
 
+    var source = document.createElement('source');
+    source.src = 'Untitled.wav';
     function handleCollision(collided_with, linearVelocity, angularVelocity) {
-        /*switch ( ++this.collisions ) {
-
-         case 1:
-         this.material.color.setHex(0xcc8855);
-         break;
-
-         case 2:
-         this.material.color.setHex(0xbb9955);
-         break;
-
-         case 3:
-         this.material.color.setHex(0xaaaa55);
-         break;
-
-         case 4:
-         this.material.color.setHex(0x99bb55);
-         break;
-
-         case 5:
-         this.material.color.setHex(0x88cc55);
-         break;
-
-         case 6:
-         this.material.color.setHex(0x77dd55);
-         break;
-         }*/
+        var max=10.0;
+        if(Math.abs(linearVelocity.x)>(max*4) ||
+            Math.abs(linearVelocity.y)>(max*7) ||
+            Math.abs(linearVelocity.z)>(max*4)){
+        /*if(Math.abs(angularVelocity.x)>max ||
+            Math.abs(angularVelocity.y)>max ||
+            Math.abs(angularVelocity.z)>max) {*/
+            /*console.log("linearVelx: "+linearVelocity.x);
+             console.log("linearVely: "+linearVelocity.y);
+             console.log("linearVelz: "+linearVelocity.z);
+             console.log("angularVElx: "+angularVelocity.x);
+             console.log("angularVEly: "+angularVelocity.y);
+             console.log("angularVElz: "+angularVelocity.z);*/
+            var audio = document.createElement('audio');
+            audio.appendChild(source);
+            audio.play();
+        }
     }
 
     function createBox() {
@@ -786,14 +807,14 @@ function mainScene() {
             g_Geometry,
             //BoxMaterial,
             Physijs.createMaterial(
-                new THREE.MeshPhongMaterial({
-                    color: 0x660000, specular: 0x888888, shininess: 250,
-                    opacity: 1.0,
+                //new THREE.MeshPhongMaterial({
+                new THREE.MeshStandardMaterial({
+                    color: 0xf00000, specular: 0x111111, shininess: 250,
+                    //opacity: 1.0,
                     premultipliedAlpha: true,
-                    transparent: true,//
-                    displacementMap: displacementMap,
-                    displacementScale: 2.436143,
-                    displacementBias: - 0.428408
+                    //transparent: true,
+                    roughness: 0.4,
+                    metalness: 1.0
                 }),
                 boxFriction,
                 boxRestitution
@@ -815,7 +836,7 @@ function mainScene() {
 
         box[boxIndex].castShadow = true;
         box[boxIndex].receiveShadow = true;
-        //box[boxIndex].addEventListener('collision', handleCollision);
+        box[boxIndex].addEventListener('collision', handleCollision);
         //box.addEventListener( 'ready', spawnBox );
 
         /*geometry3.scale(20,20,20);
@@ -842,7 +863,7 @@ function mainScene() {
         //alert(scene.length);
         //group.add(box);
 
-    };
+    }
 
     //spawnBox = (function() {
     function spawnBox() {
