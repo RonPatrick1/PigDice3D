@@ -16,7 +16,7 @@ body {
 }
 
 #info a, .button {
-    color: #fc0000;
+    color: rgba(161, 0, 0, 0.51);
     color: #bebebe;
     color: #f00;
     font-weight: bold;

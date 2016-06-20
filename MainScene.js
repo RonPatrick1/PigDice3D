@@ -10,7 +10,7 @@ function mainScene() {
 
     THREE.Cache.enabled = true;
 
-    var BoxMaterial;
+    var BoxMaterial, cubeMaterial;
 
     var loader;
     var g_Geometry;// = new THREE.Geometry();
@@ -25,30 +25,35 @@ function mainScene() {
     var camera, cameraTarget, scene, renderer;
 
     var group, textMesh1, textMesh2, textGeo, material;
+    var textDist=700.0;
 
     var firstLetter = true;
+    var plane;
 
     var delta = 0.01;
-    var composerScene, composer1, renderScene, stats;
-
+    var preComposerScene, composerScene, composer1, renderScene, stats;
 
     var text = "CIS 371 Pig Dice",
 
         height = 20,
-        size = 70,
-        hover = 30,
+        size = 30,
+        hover = 50,
 
-        curveSegments = 4,
+        curveSegments = 10,
 
         bevelThickness = 2,
         bevelSize = 1.5,
-        bevelSegments = 3,
+        bevelSegments = 10,
         bevelEnabled = true,
 
         font = undefined,
 
-        fontName = "droid/droid_sans", // helvetiker, optimer, gentilis, droid sans, droid serif
-        fontWeight = "bold"; // normal bold
+        //fontName = "droid/droid_sans", // helvetiker, optimer, gentilis, droid sans, droid serif
+        //fontName = "gentilis",
+        fontName = "optimer",
+        //fontName = "helvetiker",
+        //fontName = "droid/droid_serif",
+        fontWeight = "regular"; // regular bold
 
     var mirror = false;
 
@@ -86,25 +91,15 @@ function mainScene() {
 
     var fontIndex = 1;
     var tLoader;
-    var refractSphere;
-    var groundMirror;
-    var boxFriction=.99;
+
+    var groundMirror, groundMirror2;
+    var boxFriction=.999;
     var boxRestitution=.7;
-    var groundFriction=.99;
+    var groundFriction=.999;
     var groundRestitution=.6;
 
-    var textureLoader = new THREE.TextureLoader();
-    var displacementMap = textureLoader.load( "displacement.jpg" );
-    var normalMap = textureLoader.load( "normal.jpg" );
-    var aoMap = textureLoader.load( "ao.jpg" );
-    var path = "textures/cube/SwedishRoyalCastle/";
-    var format = '.jpg';
-    var urls = [
-        path + 'px' + format, path + 'nx' + format,
-        path + 'py' + format, path + 'ny' + format,
-        path + 'pz' + format, path + 'nz' + format
-    ];
-    var reflectionCube = new THREE.CubeTextureLoader().load( urls );
+    var sceneCube, cameraCube;
+    var vertShader, fragShader, uniforms, ground_material, material_shh;
 
     init();
     animate();
@@ -164,30 +159,6 @@ function mainScene() {
             }
         }
         waitSome();
-        //g_Geometry.
-        //alert("faces: "+geometry2.faces.length);
-        //var geometry3=new THREE.Geometry();
-        //geometry3.fromBufferGeometry(geometry);
-        //alert("geo faces length: "+geometry2.faces.length);
-        //geometry2.normalize();
-        //geometry2.normalize();
-        //geometry2.normalize();
-        //geometry2.normalize();
-        //geometry2.normalize();
-
-        /*var path = "three_js_master/examples/textures/cube/SwedishRoyalCastle/";
-         var format = '.jpg';
-         var urls = [
-         path + 'px' + format, path + 'nx' + format,
-         path + 'py' + format, path + 'ny' + format,
-         path + 'pz' + format, path + 'nz' + format
-         ];
-
-         var cubeTextureLoader = new THREE.CubeTextureLoader();
-
-         refractionCube = cubeTextureLoader.load( urls );
-         refractionCube.format = THREE.RGBFormat;
-         refractionCube.mapping = THREE.CubeRefractionMapping;*/
 
         // CAMERA
 
@@ -196,10 +167,11 @@ function mainScene() {
         //camera.position.set( 0, 75, 160 );
 
         cameraTarget = new THREE.Vector3(0, 150, 0);
+        cameraCube = new THREE.PerspectiveCamera( 70, window.innerWidth / window.innerHeight, 1, 100000 );
 
         // SCENE
 
-        //scene = new THREE.Scene();
+        sceneCube = new THREE.Scene();
         scene = new Physijs.Scene({fixedTimeStep: 1 / 120});
         scene.setGravity(new THREE.Vector3(0, -1050, 0));
         scene.addEventListener(
@@ -210,6 +182,43 @@ function mainScene() {
             }
         );
         scene.fog = new THREE.Fog(0x000000, 250, 1400);
+        //scene.add( new THREE.AmbientLight( 0x222222 ) );
+
+        var r_envMap = "textures/skybox/";
+        var urls_envMap = [ r_envMap + "px.jpg", r_envMap + "nx.jpg",
+            r_envMap + "py.jpg", r_envMap + "ny.jpg",
+            r_envMap + "pz.jpg", r_envMap + "nz.jpg" ];
+        var textureCube_envMap = new THREE.CubeTextureLoader().load( urls_envMap );
+        textureCube_envMap.format = THREE.RGBFormat;
+        textureCube_envMap.mapping = THREE.CubeReflectionMapping;
+        // Skybox
+        var shader_envMap = THREE.ShaderLib[ "cube" ];
+        shader_envMap.uniforms[ "tCube" ].value = textureCube_envMap;
+        var material_envMap = new THREE.ShaderMaterial( {
+            fragmentShader: shader_envMap.fragmentShader,
+            vertexShader: shader_envMap.vertexShader,
+            uniforms: shader_envMap.uniforms,
+            depthWrite: false,
+            side: THREE.BackSide
+        } );
+        var mesh_envMap = new THREE.Mesh( new THREE.BoxGeometry( 100000, 100000, 100000 ), material_envMap );
+        mesh_envMap.position.x=0;//5000;
+        mesh_envMap.position.y=0;//-4900;
+        mesh_envMap.position.z=0;//-50000;
+        //camera.add( mesh_envMap );
+        sceneCube.add( mesh_envMap );
+
+        var cubeShader = THREE.ShaderLib[ "cube" ];
+        cubeMaterial = new THREE.ShaderMaterial( {
+            fragmentShader: cubeShader.fragmentShader,
+            vertexShader: cubeShader.vertexShader,
+            uniforms: cubeShader.uniforms,
+            depthWrite: false,
+            side: THREE.BackSide
+        } );
+        cubeMaterial.uniforms[ "tCube" ].value = textureCube_envMap;
+        //var ambient = new THREE.AmbientLight( 0xffffff );
+        //sceneCube.add( ambient );
 
         /*var pointLight = new THREE.PointLight( 0xff0000, 0.5 );
         pointLight.position.z = 2500;
@@ -262,12 +271,34 @@ function mainScene() {
         }
 
         material = new THREE.MultiMaterial([
-            new THREE.MeshPhongMaterial({color: 0xffffff, shading: THREE.FlatShading}), // front
-            new THREE.MeshPhongMaterial({color: 0xffffff, shading: THREE.SmoothShading}) // side
+            new THREE.MeshPhongMaterial({
+                color: 0xffffff,
+                shading: THREE.FlatShading,
+                metalness: 1.0,
+                roughness: 0.4
+                //transparent: true,
+                //opacity: 0.7
+            }), // front
+            new THREE.MeshPhongMaterial({
+                color: 0xffffff,
+                shading: THREE.SmoothShading,
+                metalness: 1.0,
+                roughness: 0.4
+                //transparent: true,
+                //opacity: 0.7
+            }) // side
         ]);
+        cubeMaterial.color=0xff0000;
+        cubeMaterial.roughness=0.4;
+        cubeMaterial.metalness=1.0;
+        cubeMaterial.transparent=true;
+        cubeMaterial.opacity=0.5;
+        //material=cubeMaterial;
+
+
 
         group = new THREE.Group();
-        group.position.y = 100;
+        group.position.y = hover;
 
         scene.add(group);
 
@@ -286,46 +317,17 @@ function mainScene() {
         renderer.gammaInput = true;
         renderer.gammaOutput = true;
 
-        // MIRROR planes
-        groundMirror = new THREE.Mirror(renderer, camera, {
-            color: 0x777777,
-            clipBias: 0.003,
-            textureWidth: width,
-            textureHeight: height
-        });
 
-        var ground_material = Physijs.createMaterial(
-            //new THREE.MeshBasicMaterial( { color: 0xffffff, opacity: 0.5, transparent: true } ),
-            groundMirror.material,
-            groundFriction, // high friction
-            groundRestitution // low restitution
-        );
-
-        var plane = new Physijs.BoxMesh(
-            //var plane = new Physijs.Mesh(
-            //var plane = new THREE.Mesh(
-            //new THREE.PlaneBufferGeometry( 10000, 10000 ),
-            new THREE.BoxGeometry(10000, 10000, 1),
-            //new THREE.MeshBasicMaterial( { color: 0xffffff, opacity: 0.5, transparent: true } ),
-            ground_material,
-            0
-        );
-        plane.position.y = 100;
-        //plane.rotation.x = Math.PI / 2;
-        plane.rotateX(-Math.PI / 2);
-        // 				//plane.rotation.x = -.11;// Math.PI / 2;
-
+        var planeSize=500;
         tLoader = new THREE.TextureLoader();
 
         var planeGeo = new THREE.Mesh(
-            new THREE.BoxGeometry(10000, 1, 10000),
+            new THREE.CylinderGeometry(planeSize, planeSize, 1, 200),
             new THREE.MeshBasicMaterial({color: 0x151515, opacity: 0.45, transparent: true})//grey
             //new THREE.MeshBasicMaterial( { color: 0x330000, opacity: 0.45, transparent: true } )//red
         );
         planeGeo.position.y = 101;
 
-        plane.add(groundMirror);
-        scene.add(plane);
         scene.add(planeGeo);
 
         /*var mirrorMesh = new THREE.Mesh( planeGeo, groundMirror.material );
@@ -335,8 +337,10 @@ function mainScene() {
          scene.add( mirrorMesh );  */
 
         renderer.setClearColor(scene.fog.color);
+        renderer.autoClear = false;
         renderer.setPixelRatio(window.devicePixelRatio);
         renderer.setSize(window.innerWidth, window.innerHeight);
+        renderer.setFaceCulling( THREE.CullFaceNone );
         container.appendChild(renderer.domElement);
 
         var rtParameters = {
@@ -351,15 +355,19 @@ function mainScene() {
         effectVignette.uniforms["offset"].value = 0.95;
         effectVignette.uniforms["darkness"].value = 1.6;
         effectVignette.renderToScreen = true;
+        effectVignette.clear=false;
 
         var effectHBlur = new THREE.ShaderPass(THREE.HorizontalBlurShader);
         var effectVBlur = new THREE.ShaderPass(THREE.VerticalBlurShader);
         effectHBlur.uniforms['h'].value = 2 / ( width / 2 );
         effectVBlur.uniforms['v'].value = 2 / ( height / 2 );
+        //effectVBlur.renderToScreen=true;
 
         var clearMask = new THREE.ClearMaskPass();
+        clearMask.clear=false;
         var renderMask = new THREE.MaskPass(scene, camera);
         var renderMaskInverse = new THREE.MaskPass(scene, camera);
+        renderMaskInverse.clear=false;
 
         renderMaskInverse.inverse = true;
 
@@ -384,21 +392,78 @@ function mainScene() {
          scene.add(refractSphere); */
 
         rPass = new THREE.RenderPass(scene, camera);
-        rPass.clear = false;
+        rPass.clear =false;
+        var envPass=new THREE.RenderPass(sceneCube, cameraCube);
+        envPass.clear=true;
+        var effectBloom = new THREE.BloomPass(  );
+        effectBloom.clear = false;
+        effectBloom.renderToScreen = true;
+        //preComposerScene = new THREE.EffectComposer(renderer, new THREE.WebGLRenderTarget(window.innerWidth, window.innerHeight, rtParameters));
+        //preComposerScene.addPass(envPass);
+        //preComposerScene.addPass(rPass);
+        //var renderScene2 = new THREE.TexturePass(preComposerScene.renderTarget2.texture);
 
         composerScene = new THREE.EffectComposer(renderer, new THREE.WebGLRenderTarget(window.innerWidth, window.innerHeight, rtParameters));
+        composerScene.autoClear=false;
+        //composerScene.addPass(renderScene2);
+        composerScene.addPass(envPass);
+
         composerScene.addPass(rPass);
+        //composerScene.addPass(effectBloom);
         //composerScene.addPass( effectVBlur );
         //composerScene.addPass( effectHBlur );
-        composerScene.addPass(clearMask);
-        composerScene.addPass(renderMaskInverse);
+        //composerScene.addPass(clearMask);
+        //composerScene.addPass(renderMaskInverse);
 
         renderScene = new THREE.TexturePass(composerScene.renderTarget2.texture);
 
-        composer1 = new THREE.EffectComposer(renderer, new THREE.WebGLRenderTarget(window.innerWidth, window.innerHeight, rtParameters));
+        // MIRROR planes
+        groundMirror = new THREE.Mirror(renderer, camera, {
+            opacity: .1, transparent: true,
+            color: 0x777777,
+            clipBias: 0.003,
+            textureWidth: width,
+            textureHeight: height
+        });
+        groundMirror.rotation.x=Math.PI/2;
 
+        ground_material = Physijs.createMaterial(
+            //new THREE.MeshBasicMaterial( { color: 0xffffff, opacity: 0.5, transparent: true } ),
+            groundMirror.material,
+            //material_shh,
+            //composerScene.renderTarget2.texture,
+            groundFriction, // high friction
+            groundRestitution // low restitution
+        );
+
+        plane = new Physijs.CylinderMesh(
+            //var plane = new Physijs.Mesh(
+            //var plane = new THREE.Mesh(
+            //new THREE.PlaneBufferGeometry( 10000, 10000 ),
+            new THREE.CylinderGeometry(planeSize, planeSize, 10,200,5,false),
+            //new THREE.MeshBasicMaterial( { color: 0xffffff, opacity: 0.5, transparent: true } ),
+            ground_material,
+            //multMat,
+            0
+        );
+
+        plane.position.y = 100;
+        plane.rotation.x=Math.PI;
+        plane.add(groundMirror);
+        scene.add(plane);
+        //sceneCube.add(plane);
+        //plane.rotation.z=Math.PI;
+        ////plane.rotateX(-Math.PI / 2);
+        // 				//plane.rotation.x = -.11;// Math.PI / 2;
+
+        composer1 = new THREE.EffectComposer(renderer, new THREE.WebGLRenderTarget(window.innerWidth, window.innerHeight, rtParameters));
+        composer1.autoClear=false;
+        //renderScene.renderToScreen=true;
+        //renderScene.clear=false;
         composer1.addPass(renderScene);
-        ////composer1.addPass( renderMask );
+        //renderMask.clear=false;
+        //renderMask.renderToScreen=true;
+        //composer1.addPass( renderMask );
         //composer1.addPass( effectFilmBW );
         //composer1.addPass( clearMask );
         composer1.addPass(effectVignette);
@@ -415,6 +480,7 @@ function mainScene() {
         document.addEventListener('touchmove', onDocumentTouchMove, false);
         document.addEventListener('keypress', onDocumentKeyPress, false);
         document.addEventListener('keydown', onDocumentKeyDown, false);
+        document.addEventListener('keyup', onDocumentKeyUp, false);
 
         /*document.getElementById( "color" ).addEventListener( 'click', function() {
 
@@ -475,6 +541,8 @@ function mainScene() {
 
         camera.aspect = window.innerWidth / window.innerHeight;
         camera.updateProjectionMatrix();
+        cameraCube.aspect = window.innerWidth / window.innerHeight;
+        cameraCube.updateProjectionMatrix();
 
         renderer.setSize(window.innerWidth, window.innerHeight);
 
@@ -493,6 +561,17 @@ function mainScene() {
 
     }
 
+    var RotX=0;
+    var RotY=0;
+    var RotZ=0;
+    var shiftDown=false;
+    function onDocumentKeyUp(event) {
+        /*var keyCode = event.keyCode;
+
+        if(keyCode==16) {
+            shiftDown=false;
+        }*/
+    }
     function onDocumentKeyDown(event) {
 
         if (firstLetter) {
@@ -504,7 +583,39 @@ function mainScene() {
 
         var keyCode = event.keyCode;
 
+        /*if(keyCode==16) {
+            shiftDown=true;
+        }
         // backspace
+        console.log("down: "+keyCode);
+        var addTo=Math.PI/8;
+        if(shiftDown) {
+            addTo=-Math.PI/8;
+        }
+        if(keyCode==81) {
+            RotX += addTo;
+            if (RotX == 2 * Math.PI) {
+                RotX = 0;
+            }
+            console.log(RotX);
+            return;
+        }
+        if(keyCode==87) {
+            RotY += addTo;
+            if (RotY == 2 * Math.PI) {
+                RotY = 0;
+            }
+            console.log(RotY);
+            return;
+        }
+        if(keyCode==69) {
+            RotZ += addTo;
+            if (RotZ == 2 * Math.PI) {
+                RotZ = 0;
+            }
+            console.log(RotZ);
+            return;
+        }*/
 
         if (keyCode == 8) {
 
@@ -626,16 +737,16 @@ function mainScene() {
 
         textMesh1 = new THREE.Mesh(textGeo, material);
 
-        textMesh1.position.x = centerOffset;
-        textMesh1.position.y = hover;
-        textMesh1.position.z = 0;
-
-        textMesh1.rotation.x = 0;
-        textMesh1.rotation.y = Math.PI * 2;
+        //textMesh1.position.x = centerOffset;
+        //textMesh1.position.y = hover;
+        //textMesh1.position.z = 0;
+        group.position.x=centerOffset;
 
         group.add(textMesh1);
+        //camera.add
+        //scene.add(textMesh1);
 
-        if (mirror) {
+        /*if (mirror) {
 
             textMesh2 = new THREE.Mesh(textGeo, material);
 
@@ -646,16 +757,17 @@ function mainScene() {
             textMesh2.rotation.x = Math.PI;
             textMesh2.rotation.y = Math.PI * 2;
 
-            group.add(textMesh2);
+            //group.add(textMesh2);
 
-        }
+        }*/
 
     }
 
     function refreshText() {
 
         group.remove(textMesh1);
-        if (mirror) group.remove(textMesh2);
+        //scene.remove(textMesh1);
+        //if (mirror) group.remove(textMesh2);
 
         if (!text) return;
 
@@ -737,20 +849,36 @@ function mainScene() {
 
     function render() {
 
-        group.rotation.y += ( targetRotation - group.rotation.y ) * 0.05;
+        //group.rotation.y += ( targetRotation - group.rotation.y ) * 0.05;
 
-        var targ = new THREE.Vector3(0, 150, 0);
+        //plane.rotation.x=RotX;
+        //plane.rotation.y=RotY;
+        //plane.rotation.z=RotZ;
+        cameraTarget.x=0;
+        cameraTarget.y=150;
+        cameraTarget.z=0;
         if(box[boxIndex-1]) {
             if(box[boxIndex-1].position.y<480) {
-                targ.x=box[boxIndex-1].position.x;
-                targ.y=box[boxIndex-1].position.y;
-                targ.z=box[boxIndex-1].position.z;
+                cameraTarget.x=box[boxIndex-1].position.x;
+                cameraTarget.y=box[boxIndex-1].position.y;
+                cameraTarget.z=box[boxIndex-1].position.z;
             }
         }
-        camera.lookAt(targ);
-        console.log("changed lookAt");
+        camera.lookAt(cameraTarget);
+        if(textMesh1) {
+            //textMesh1.position.x = cameraTarget.x;//+centerOffset;
+            //textMesh1.position.y = cameraTarget.y;
+            //textMesh1.position.z = cameraTarget.z;//400;
+            textMesh1.rotation.copy(camera.rotation);
+            textMesh1.position.copy(camera.position);
+            textMesh1.position.lerp(cameraTarget, textDist / camera.position.distanceTo(cameraTarget));
+        }
+        //camera.lookAt(textMesh1);
+        cameraCube.rotation.copy( camera.rotation );
+        //cameraCube.position.copy( camera.position );
         scene.simulate();
         groundMirror.render();
+        //groundMirror2.render();
         /*for($i=0;$i<box2.length;$i++) {
          box2[$i].position.y=-box[$i].position.y+199;
          box2[$i].position.x=box[$i].position.x;
@@ -766,10 +894,14 @@ function mainScene() {
         //renderer.clear();
         //renderer.render( scene, camera );
         //renderer.setViewport( 0, 0, window.innerWidth, window.innerHeight );
+        //preComposerScene.render(delta);
+        //renderer.render(sceneCube,cameraCube);
+        //renderer.render(scene,camera);
+
         composerScene.render(delta);
         //renderer.setViewport( 0, 0, window.innerWidth, window.innerHeight );
         composer1.render(delta);
-
+        //renderer.render(sceneCube,cameraCube);
     }
 
     var source = document.createElement('source');
@@ -803,6 +935,7 @@ function mainScene() {
         }
         //alert("rest: "+BoxMaterial.restitution);
         //alert("friction: "+BoxMaterial.friction);
+
         box[boxIndex] = new Physijs.BoxMesh(
             g_Geometry,
             //BoxMaterial,
@@ -816,15 +949,13 @@ function mainScene() {
                     roughness: 0.4,
                     metalness: 1.0
                 }),
+                //cubeMaterial,
                 boxFriction,
                 boxRestitution
             ),
             1000
         );
-        //alert("rest: "+box[boxIndex].material.restitution);
-        //alert("friction: "+box[boxIndex].material.friction);
-        //box[boxIndex].material.friction=boxFriction;
-        //box[boxIndex].material.restitution=boxRestitution;
+
         box[boxIndex].collisions = 0;
         box[boxIndex].position.y = 550;
 
@@ -837,31 +968,9 @@ function mainScene() {
         box[boxIndex].castShadow = true;
         box[boxIndex].receiveShadow = true;
         box[boxIndex].addEventListener('collision', handleCollision);
-        //box.addEventListener( 'ready', spawnBox );
-
-        /*geometry3.scale(20,20,20);
-         box2[boxIndex] = new THREE.Mesh(
-         geometry3,
-         material
-         );
-         //box2[boxIndex].geometry.scale(-1,-1,-1);
-         box2[boxIndex].position.y=-350;
-
-         box2[boxIndex].rotation.set(
-         box[boxIndex].rotation.x,
-         box[boxIndex].rotation.y,
-         box[boxIndex].rotation.z
-         );
-
-         box2[boxIndex].castShadow = true;
-         box2[boxIndex].receiveShadow = true;*/
 
         scene.add(box[boxIndex]);
-        //scene.add( box2[boxIndex] );
         boxIndex++;
-
-        //alert(scene.length);
-        //group.add(box);
 
     }
 

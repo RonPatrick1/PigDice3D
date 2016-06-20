@@ -22,15 +22,47 @@
 <script src="js/postprocessing/ShaderPass.js"></script>
 <script src="js/postprocessing/FilmPass.js"></script>
 <script src="js/shaders/FilmShader.js"></script>
+<script src="js/shaders/ConvolutionShader.js"></script>
 <script src="js/shaders/VignetteShader.js"></script>
 <script src="js/shaders/HorizontalBlurShader.js"></script>
 <script src="js/shaders/VerticalBlurShader.js"></script>
 <script src="js/postprocessing/TexturePass.js"></script>
 <script src="js/postprocessing/RenderPass.js"></script>
 <script src="js/postprocessing/MaskPass.js"></script>
+<script src="js/postprocessing/BloomPass.js"></script>
 <script src="js/loaders/STLLoader.js"></script>
 <script type="text/javascript" src="physi.js"></script>
 <script src="MainScene.js"></script>
+
+<script id="fragment_shh" type="x-shader/x-fragment">
+    #ifdef GL_ES
+    precision highp float;
+    #endif
+
+    uniform sampler2D tOne;
+    uniform sampler2D tSec;
+
+    varying vec2 vUv;
+    
+    void main(void) {
+        vec3 c;
+        vec4 Ca = texture2D(tOne, vUv);
+        vec4 Cb = texture2D(tSec, vUv);
+        c = Ca.rgb * Ca.a + Cb.rgb * Cb.a * (1.0 - Ca.a);
+        gl_FragColor= vec4(c, 1.0);
+        
+    }
+</script>
+
+<script id="vertex_shh" type="x-shader/x-vertex">
+    varying vec2 vUv;		
+    void main() {
+        vUv = uv;
+        vec4 mvPosition = modelViewMatrix * vec4( position, 1.0 );
+        gl_Position = projectionMatrix * mvPosition;
+    }		
+</script>
+
 <script type="text/javascript">
     window.onload = function () {
         mainScene();
