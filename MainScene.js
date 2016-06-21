@@ -1,5 +1,32 @@
 /**
- * Created by rpatrick on 6/19/16.
+ * CIS 371 - Semester Project
+ * Ron Patrick
+ * Pig Dice 3D
+ *
+ * I'm aware the code isn't cleaned up nice for submission.
+ * I had to leave in a lot of experimental code.
+ * Also, I was planning on having the code make a new table
+ * for each game started with the name of each player who
+ * wanted to join.  I was planning on adding a "join" button
+ * to the gui and allowing anyone to join a game as long as
+ * it hasn't started already.  I was planning on implementing
+ * a chat section of the gui that pulls down on the right
+ * side of the screen and sanitizing the inputs with PHP before
+ * storing the chat messages in the unique table in the
+ * database.  I was planning on implementing an asynchronous
+ * timeout function that would send and AJAX query to the
+ * server once a second to retrieve game player turn, chat
+ * messages, the current game score, what decision the current
+ * player made on their turn, and what the remote player roled with
+ * their dice.  I was planning on having the game simple play
+ * a different colored dice animated with the remote player's
+ * name hovering above it and then when it reaches it's resting
+ * spot, then simply change the rotation to match whatever the
+ * remote browser with the remote player rolled.  I was planning
+ * on having the GUI add a button whenever a new game is put onto
+ * the server and wait for the other players to all agree they
+ * are ready to start.  I was planning on all this, I simply
+ * do not have enough time to finish. 
  */
 
 function mainScene() {
@@ -33,7 +60,7 @@ function mainScene() {
     var delta = 0.01;
     var preComposerScene, composerScene, composer1, renderScene, stats;
 
-    var text = "CIS 371 Pig Dice",
+    var text = "Player Name",
 
         height = 20,
         size = 30,
@@ -101,6 +128,21 @@ function mainScene() {
     var sceneCube, cameraCube;
     var vertShader, fragShader, uniforms, ground_material, material_shh;
 
+    var gui;
+    var iGui;
+    var dummyButton2={nothing:function(){}};
+    var hsDummyButtons, wlDummyButtons;
+    var itPoints;
+    var gameList;
+    var gameNameList;
+    var gameStarted;
+    var gameFolder;
+    var gameMsg;
+    var nameChanged=false;
+    var haveLocalStorage=false;
+    var gameStartButton;
+    var gameRunning=false;
+
     init();
     animate();
 
@@ -117,8 +159,21 @@ function mainScene() {
 
     function init() {
 
-        container = document.createElement('div');
-        document.body.appendChild(container);
+        if (typeof(Storage) !== "undefined") {
+            haveLocalStorage=true;
+            if(localStorage.getItem("PlayerName")!=null) {
+                text=localStorage.getItem("PlayerName");
+                nameChanged=true;
+            }
+            else {
+                console.log("it's null");
+            }
+        }
+        //container = document.createElement('div');
+        //container.id="mainContainer";
+        //document.body.appendChild(container);
+        //console.log(document.getElementById("mainContainer").id);
+        container=document.getElementById("mainContainer");
 
         BoxMaterial = Physijs.createMaterial(
             //new THREE.MeshPhongMaterial( { color: 0xffffff, specular: 0x111111, shininess: 200}),
@@ -475,19 +530,24 @@ function mainScene() {
 
         // EVENTS
 
-        document.addEventListener('mousedown', onDocumentMouseDown, false);
-        document.addEventListener('touchstart', onDocumentTouchStart, false);
-        document.addEventListener('touchmove', onDocumentTouchMove, false);
-        document.addEventListener('keypress', onDocumentKeyPress, false);
-        document.addEventListener('keydown', onDocumentKeyDown, false);
-        document.addEventListener('keyup', onDocumentKeyUp, false);
+        //document.getElementById("mainContainer").addEventListener('mousedown', onDocumentMouseDown, false);
+        //document.getElementById("mainContainer").addEventListener('touchstart', onDocumentTouchStart, false);
+        //document.getElementById("mainContainer").addEventListener('touchmove', onDocumentTouchMove, false);
+        //document.getElementById("mainContainer").addEventListener('keypress', onDocumentKeyPress, false);
+        //document.getElementById("mainContainer").addEventListener('keydown', onDocumentKeyDown, false);
+        window.addEventListener('keydown', onDocumentKeyDown, false);
+        //document.getElementById("mainContainer").addEventListener('keyup', onDocumentKeyUp, false);
+        //document.getElementById("mainContainer").onkeypress = onDocumentKeyPress;
+        //document.getElementById("mainContainer").onkeydown = onDocumentKeyDown;
+        //document.getElementById("mainContainer").onkeyup = onDocumentKeyUp;
 
-        /*document.getElementById( "color" ).addEventListener( 'click', function() {
 
-         pointLight.color.setHSL( Math.random(), 1, 0.5 );
-         hex = decimalToHex( pointLight.color.getHex() );
+            /*document.getElementById( "color" ).addEventListener( 'click', function() {
 
-         }, false );*/
+             pointLight.color.setHSL( Math.random(), 1, 0.5 );
+             hex = decimalToHex( pointLight.color.getHex() );
+
+             }, false );*/
 
         /*document.getElementById( "font" ).addEventListener( 'click', function() {
 
@@ -529,9 +589,110 @@ function mainScene() {
         renderScene.uniforms["tDiffuse"].value = composerScene.renderTarget2.texture;
 
         window.addEventListener('resize', onWindowResize, false);
-        //spawnBox();
         scene.simulate();
+        setupGui(text);
 
+    }
+
+    function setupGui(input) {
+
+        hsDummyButtons=[];
+        wlDummyButtons=[];
+        gameList=[];
+        gameNameList=[];
+        gameStarted=[];
+        function doGUI(playerName) {
+            this.__defineGetter__("playerName", function () {
+                return playerName;
+            });
+
+            this.__defineSetter__("playerName", function (m) {
+                playerName = m;
+                if (gameMsg) {
+                    if(nameChanged==false) {
+                        gameMsg.name("");
+                        nameChanged = true;
+                    }
+                }
+                if(localStorage.getItem("PlayerName")!=playerName) {
+                    localStorage.removeItem("PlayerName");
+                    localStorage.setItem("PlayerName", playerName);
+                }
+                text=playerName;
+                refreshText();
+            });
+            this.playerName=playerName;
+        }
+        function propsLocal(gTargetPoints) {
+            this.__defineGetter__("gTargetPoints", function () {
+                return gTargetPoints;
+            });
+
+            this.__defineSetter__("gTargetPoints", function (m) {
+                gTargetPoints = m;
+            });
+            this.gTargetPoints=100;
+        }
+
+        gui = new dat.GUI({width:400});
+        iGui=new doGUI(text);
+        itPoints=new propsLocal();
+        var dummyButton={nothing:function(){}};
+        gameMsg=gui.add(dummyButton, "nothing").name("Game Message: ").listen();
+        var nameFolder=gui.addFolder("High Scores");
+        nameFolder.add(dummyButton,"nothing").name("High Points");
+        for(var i=0;i<10;i++) {
+            hsDummyButtons[i]=nameFolder.add(dummyButton, "nothing").name("waiting for database...").listen();
+        }
+        nameFolder.add(dummyButton,"nothing").name("High Win/Loss %");
+        for(var i=0;i<10;i++) {
+            wlDummyButtons[i]=nameFolder.add(dummyButton, "nothing").name("waiting for database...").listen();
+        }
+        gameFolder=gui.addFolder("Games on Server");
+
+        var startNewGame={
+            start: function(){
+                if(!nameChanged) {
+                    var person = prompt("You must enter a unique player name", "");
+                    if (person != null) {
+                        iGui.playerName=person;
+                    }
+                }
+                for(var i=0;i<gameNameList.length;i++) {
+                    if (gameNameList[i]==iGui.playerName) {
+                        var r = confirm("You already started a game!!!");
+                        /*if (r == true) {
+                         x = "You pressed OK!";
+                         } else {
+                         x = "You pressed Cancel!";
+                         }*/
+                        return;
+                    }
+                }
+                startGame();
+            }
+        };
+
+        gui.add(startNewGame,"start").name("Start a new game");
+        gui.add(itPoints, 'gTargetPoints').min(20).max(200).name("Game Target Points").listen();
+        var elms = document.getElementsByClassName("property-name");
+        for (var i = 0; i < elms.length; i++) {
+            if(elms[i].innerHTML=="Game Message: ") {
+                elms[i].id="gameMsg";
+                elms[i].parentElement.setAttribute("style","height:500px");
+            }
+            if (elms[i].innerHTML == "High Points" || elms[i].innerHTML=="High Win/Loss %") {
+                elms[i].id="hHeader";
+            }
+        }
+        gui.add(iGui, 'playerName').name('Change Name').listen();
+        if(!nameChanged) {
+            gameMsg.name("Change your player name!");
+        } else {
+            gameMsg.name("Welcome to PigDice 3D");
+        }
+        getHighScores();
+        getGames();
     }
 
     function onWindowResize() {
@@ -574,13 +735,6 @@ function mainScene() {
     }
     function onDocumentKeyDown(event) {
 
-        if (firstLetter) {
-
-            firstLetter = false;
-            text = "";
-
-        }
-
         var keyCode = event.keyCode;
 
         /*if(keyCode==16) {
@@ -616,17 +770,25 @@ function mainScene() {
             console.log(RotZ);
             return;
         }*/
+        if (keyCode == 13) {
+            if(nameChanged==true) {
+                rollStarted = true;
+                text = iGui.playerName;
+                refreshText();
+                createBox();
+                return true;
+            }
+        }
 
-        if (keyCode == 8) {
+        /*if (keyCode == 8) {
 
             event.preventDefault();
-
             text = text.substring(0, text.length - 1);
             refreshText();
 
-            return false;
+            return true;
 
-        }
+        }*/
 
     }
 
@@ -635,11 +797,6 @@ function mainScene() {
         var keyCode = event.which;
 
         // backspace
-
-        if (keyCode == 13) {
-            spawnBox();
-            return;
-        }
 
         if (keyCode == 8) {
 
@@ -670,6 +827,9 @@ function mainScene() {
     }
 
     function createText() {
+        if (!font) {
+            return;
+        }
 
         textGeo = new THREE.TextGeometry(text, {
 
@@ -779,9 +939,9 @@ function mainScene() {
 
         event.preventDefault();
 
-        document.addEventListener('mousemove', onDocumentMouseMove, false);
-        document.addEventListener('mouseup', onDocumentMouseUp, false);
-        document.addEventListener('mouseout', onDocumentMouseOut, false);
+        document.getElementById("mainContainer").addEventListener('mousemove', onDocumentMouseMove, false);
+        document.getElementById("mainContainer").addEventListener('mouseup', onDocumentMouseUp, false);
+        document.getElementById("mainContainer").addEventListener('mouseout', onDocumentMouseOut, false);
 
         mouseXOnMouseDown = event.clientX - windowHalfX;
         targetRotationOnMouseDown = targetRotation;
@@ -798,17 +958,17 @@ function mainScene() {
 
     function onDocumentMouseUp(event) {
 
-        document.removeEventListener('mousemove', onDocumentMouseMove, false);
-        document.removeEventListener('mouseup', onDocumentMouseUp, false);
-        document.removeEventListener('mouseout', onDocumentMouseOut, false);
+        document.getElementById("mainContainer").removeEventListener('mousemove', onDocumentMouseMove, false);
+        document.getElementById("mainContainer").removeEventListener('mouseup', onDocumentMouseUp, false);
+        document.getElementById("mainContainer").removeEventListener('mouseout', onDocumentMouseOut, false);
 
     }
 
     function onDocumentMouseOut(event) {
 
-        document.removeEventListener('mousemove', onDocumentMouseMove, false);
-        document.removeEventListener('mouseup', onDocumentMouseUp, false);
-        document.removeEventListener('mouseout', onDocumentMouseOut, false);
+        document.getElementById("mainContainer").removeEventListener('mousemove', onDocumentMouseMove, false);
+        document.getElementById("mainContainer").removeEventListener('mouseup', onDocumentMouseUp, false);
+        document.getElementById("mainContainer").removeEventListener('mouseout', onDocumentMouseOut, false);
 
     }
 
@@ -847,6 +1007,146 @@ function mainScene() {
 
     }
 
+    function getRoll() {
+        var diff=Math.PI*2;
+        var output;
+
+        //for One
+        //x=-PI/2 y=0
+        var rTest=Math.abs(box[boxIndex].rotation.x+(Math.PI/2))+Math.abs(box[boxIndex].rotation.y);
+        if(rTest<diff) {
+            diff=rTest;
+            output=1;
+        }
+        rTest=Math.abs(Math.abs(box[boxIndex].rotation.x)-(Math.PI/2))+Math.abs(Math.abs(box[boxIndex].rotation.y)-Math.PI);
+        if(rTest<diff) {
+            diff=rTest;
+            output=1;
+        }
+
+        //for Two
+        //x=PI z=PI/2
+        //x=0 z=-PI/2
+        //x=-PI z=PI/2
+        rTest=Math.abs(box[boxIndex].rotation.x-Math.PI)+Math.abs(box[boxIndex].rotation.z-(Math.PI/2));
+        if(rTest<diff) {
+            diff=rTest;
+            output=2;
+        }
+        rTest=Math.abs(box[boxIndex].rotation.z+(Math.PI/2))+Math.abs(box[boxIndex].rotation.x);
+        if(rTest<diff) {
+            diff=rTest;
+            output=2;
+        }
+        rTest=Math.abs(box[boxIndex].rotation.z-(Math.PI/2))+Math.abs(box[boxIndex].rotation.x+Math.PI);
+        if(rTest<diff) {
+            diff=rTest;
+            output=2;
+        }
+
+        //for Three
+        //z=0 x=-PI
+        //x=PI z=0
+        //z=PI x=0
+        //x=0 z=-pi
+        rTest=Math.abs(box[boxIndex].rotation.x+Math.PI)+Math.abs(box[boxIndex].rotation.z);
+        if(rTest<diff) {
+            diff=rTest;
+            output=3;
+        }
+        rTest=Math.abs(box[boxIndex].rotation.x-Math.PI)+Math.abs(box[boxIndex].rotation.z);
+        if(rTest<diff) {
+            diff=rTest;
+            output=3;
+        }
+        rTest=Math.abs(box[boxIndex].rotation.z-Math.PI)+Math.abs(box[boxIndex].rotation.x);
+        if(rTest<diff) {
+            diff=rTest;
+            output=3;
+        }
+        rTest=Math.abs(box[boxIndex].rotation.z+Math.PI)+Math.abs(box[boxIndex].rotation.x);
+        if(rTest<diff) {
+            diff=rTest;
+            output=3;
+        }
+
+        //for Four
+        //x=0 z=0
+        //x=-PI z=PI
+        //x=PI z=PI
+        //x=PI z=-PI
+        //x=-pi z=-pi
+        rTest=Math.abs(box[boxIndex].rotation.x)+Math.abs(box[boxIndex].rotation.z);
+        if(rTest<diff) {
+            diff=rTest;
+            output=4;
+        }
+        rTest=Math.abs(Math.abs(box[boxIndex].rotation.x)-Math.PI)+Math.abs(Math.abs(box[boxIndex].rotation.z)-Math.PI);
+        if(rTest<diff) {
+            diff=rTest;
+            output=4;
+        }
+        /*rTest=Math.abs(box[boxIndex].rotation.x-Math.PI)+Math.abs(box[boxIndex].rotation.z-Math.PI);
+        if(rTest<diff) {
+            diff=rTest;
+            output=4;
+        }
+        rTest=Math.abs(box[boxIndex].rotation.x-Math.PI)+Math.abs(box[boxIndex].rotation.z+Math.PI);
+        if(rTest<diff) {
+            diff=rTest;
+            output=4;
+        }*/
+
+        //for Five
+        //x=0 z=PI/2
+        //x=PI z=-PI/2
+        //x=-PI z=-PI/2
+        rTest=Math.abs(box[boxIndex].rotation.z-(Math.PI/2))+Math.abs(box[boxIndex].rotation.x);
+        if(rTest<diff) {
+            diff=rTest;
+            output=5;
+        }
+        rTest=Math.abs(box[boxIndex].rotation.z+(Math.PI/2))+Math.abs(box[boxIndex].rotation.x-Math.PI);
+        if(rTest<diff) {
+            diff=rTest;
+            output=5;
+        }
+        rTest=Math.abs(box[boxIndex].rotation.z+(Math.PI/2))+Math.abs(box[boxIndex].rotation.x+Math.PI);
+        if(rTest<diff) {
+            diff=rTest;
+            output=5;
+        }
+
+        //for Six
+        //x=PI/2 y=0
+        //x=0 z=-PI
+        //y=0 x=pi/2
+        rTest=Math.abs(box[boxIndex].rotation.x-(Math.PI/2))+Math.abs(box[boxIndex].rotation.y);
+        if(rTest<diff) {
+            output=6;
+        }
+        rTest=Math.abs(box[boxIndex].rotation.x+(Math.PI/2))+Math.abs(box[boxIndex].rotation.y);
+        if(rTest<diff) {
+            output=6;
+        }
+        return output;
+    }
+
+    var rollStarted=false;
+    var waitingForDie=false;
+    var prevDiePos=new THREE.Vector3();
+    var thresh=0.02;
+    function rest() {
+        rollStarted=false;
+        text = iGui.playerName + " rolled " + getRoll();
+        refreshText();
+        /*gui.add(dummyButton2,'nothing').name("x: "+box[boxIndex].rotation.x);
+        gui.add(dummyButton2,'nothing').name("y: "+box[boxIndex].rotation.y);
+        gui.add(dummyButton2,'nothing').name("z: "+box[boxIndex].rotation.z);
+        gui.add(dummyButton2,'nothing').name("You rolled a "+getRoll());*/
+
+    }
+
     function render() {
 
         //group.rotation.y += ( targetRotation - group.rotation.y ) * 0.05;
@@ -857,11 +1157,42 @@ function mainScene() {
         cameraTarget.x=0;
         cameraTarget.y=150;
         cameraTarget.z=0;
-        if(box[boxIndex-1]) {
+        /*if(box[boxIndex-1]) {
             if(box[boxIndex-1].position.y<480) {
                 cameraTarget.x=box[boxIndex-1].position.x;
                 cameraTarget.y=box[boxIndex-1].position.y;
                 cameraTarget.z=box[boxIndex-1].position.z;
+            }
+        }*/
+        if(box[boxIndex]) {
+            if(box[boxIndex].position.y<480) {
+                cameraTarget.x=box[boxIndex].position.x;
+                cameraTarget.y=box[boxIndex].position.y;
+                cameraTarget.z=box[boxIndex].position.z;
+            }
+            if(box[boxIndex].position.y<-900) {
+                createBox();
+            }
+            if(rollStarted && !waitingForDie) {
+                if(box[boxIndex].position.y<480) {
+                    if(box[boxIndex].position.distanceTo(prevDiePos)<0) {
+                        console.log(box[boxIndex].position.distanceTo(prevDiePos));
+                    }
+                    function waitStop() {
+                        if(rollStarted) {
+                            if (box[boxIndex].position.distanceTo(prevDiePos) < thresh) {
+                                rest();
+                            }
+                        }
+                        waitingForDie=false;
+                    }
+                    if (box[boxIndex].position.distanceTo(prevDiePos) < thresh) {
+                        waitingForDie=true;
+                        setTimeout(waitStop, 100);
+                    } else {
+                        prevDiePos.copy(box[boxIndex].position);
+                    }
+                }
             }
         }
         camera.lookAt(cameraTarget);
@@ -929,53 +1260,165 @@ function mainScene() {
     function createBox() {
 
         //alert("faces: "+g_Geometry.faces.length);
-        while(BoxMaterial.friction!=boxFriction) {
-            BoxMaterial.friction=boxFriction;
-            BoxMaterial.restitution=boxRestitution;
+        if(!box[boxIndex]) {
+            while (BoxMaterial.friction != boxFriction) {
+                BoxMaterial.friction = boxFriction;
+                BoxMaterial.restitution = boxRestitution;
+            }
+            //alert("rest: "+BoxMaterial.restitution);
+            //alert("friction: "+BoxMaterial.friction);
+
+            box[boxIndex] = new Physijs.BoxMesh(
+                g_Geometry,
+                //BoxMaterial,
+                Physijs.createMaterial(
+                    //new THREE.MeshPhongMaterial({
+                    new THREE.MeshStandardMaterial({
+                        color: 0xf00000, specular: 0x111111, shininess: 250,
+                        //opacity: 1.0,
+                        premultipliedAlpha: true,
+                        //transparent: true,
+                        roughness: 0.4,
+                        metalness: 1.0
+                    }),
+                    //cubeMaterial,
+                    boxFriction,
+                    boxRestitution
+                ),
+                1000
+            );
+
+            box[boxIndex].collisions = 0;
+            box[boxIndex].position.y = 550;
+
+            box[boxIndex].rotation.set(
+                Math.random() * Math.PI,
+                Math.random() * Math.PI,
+                Math.random() * Math.PI
+            );
+
+            box[boxIndex].castShadow = true;
+            box[boxIndex].receiveShadow = true;
+            box[boxIndex].addEventListener('collision', handleCollision);
+
+            scene.add(box[boxIndex]);
+            //boxIndex++;
         }
-        //alert("rest: "+BoxMaterial.restitution);
-        //alert("friction: "+BoxMaterial.friction);
+        else {
+            scene.remove(box[boxIndex]);
+            box[boxIndex].collisions = 0;
+            box[boxIndex].position.y = 550;
+            box[boxIndex].position.x = 0;
+            box[boxIndex].position.z = 0;
 
-        box[boxIndex] = new Physijs.BoxMesh(
-            g_Geometry,
-            //BoxMaterial,
-            Physijs.createMaterial(
-                //new THREE.MeshPhongMaterial({
-                new THREE.MeshStandardMaterial({
-                    color: 0xf00000, specular: 0x111111, shininess: 250,
-                    //opacity: 1.0,
-                    premultipliedAlpha: true,
-                    //transparent: true,
-                    roughness: 0.4,
-                    metalness: 1.0
-                }),
-                //cubeMaterial,
-                boxFriction,
-                boxRestitution
-            ),
-            1000
-        );
-
-        box[boxIndex].collisions = 0;
-        box[boxIndex].position.y = 550;
-
-        box[boxIndex].rotation.set(
-            Math.random() * Math.PI,
-            Math.random() * Math.PI,
-            Math.random() * Math.PI
-        );
-
-        box[boxIndex].castShadow = true;
-        box[boxIndex].receiveShadow = true;
-        box[boxIndex].addEventListener('collision', handleCollision);
-
-        scene.add(box[boxIndex]);
-        boxIndex++;
+            box[boxIndex].rotation.set(
+                Math.random() * Math.PI,
+                Math.random() * Math.PI,
+                Math.random() * Math.PI
+            );
+            scene.add(box[boxIndex]);
+        }
+        prevDiePos.copy(box[boxIndex].position);
+        //gui.remove(dummyButton2,'nothing');
+        //gui.remove(dummyButton2,'nothing');
+        //gui.remove(dummyButton2,'nothing');
 
     }
 
-    //spawnBox = (function() {
-    function spawnBox() {
-        createBox();
+
+    function getHighScores() {
+        var ajax = new XMLHttpRequest();
+        ajax.open("GET", "getHighScores.php?randomMessage=score");
+        ajax.onreadystatechange = function () {
+            if (ajax.readyState == 4) {
+                var events = ajax.responseXML.getElementsByTagName("HSentry");
+                var nRows = events.length;
+                for (var i = 0; i < nRows; i++) {
+                    var player = events[i].getElementsByTagName("player")[0].innerHTML;
+                    var score = events[i].getElementsByTagName("score")[0].innerHTML;
+                    hsDummyButtons[i].name(player+": "+score);
+                }
+                var events2 = ajax.responseXML.getElementsByTagName("WLentry");
+                nRows = events2.length;
+                for (var i = 0; i < nRows; i++) {
+                    player = events2[i].getElementsByTagName("player")[0].innerHTML;
+                    score = events2[i].getElementsByTagName("score")[0].innerHTML;
+                    wlDummyButtons[i].name(player+": "+score);
+                }
+            }
+        };
+        ajax.send();
     }
+
+    function getGames() {
+        if(gameList) {
+            for (var i = 0; i < gameList.length; i++) {
+                if (gameFolder) {
+                    if (gameList[i]) {
+                        gameFolder.remove(gameList[i]);
+                    }
+                }
+            }
+            gameList.length=0;
+            gameNameList.length=0;
+            gameStarted.length=0;
+        }
+        var ajax = new XMLHttpRequest();
+        ajax.open("GET", "getGames.php?randomMessage=sgame");
+        ajax.onreadystatechange = function () {
+            if (ajax.readyState == 4) {
+                var events = ajax.responseXML.getElementsByTagName("gameEntry");
+                var nRows = events.length;
+                if(nRows>0) {
+                    for (var i = 0; i < nRows; i++) {
+                        var gname = events[i].getElementsByTagName("GameName")[0].innerHTML;
+                        var numPlayers = events[i].getElementsByTagName("NumPlayers")[0].innerHTML;
+                        var started = events[i].getElementsByTagName("Started")[0].innerHTML;
+                        var start="not started yet";
+                        gameStarted[i]=started;
+                        gameNameList[i]=gname;
+                        if(started=="true") {
+                            start="already started";
+                        }
+                        if(gameList[i]) {
+                            gameList[i].name(gname + ": " + numPlayers + " players: " + start);
+                        } else {
+                            gameList[i]=gameFolder.add(dummyButton2,'nothing').name(gname + ": " + numPlayers + " players: " + start);
+                        }
+                    }
+                } else {
+                    if(gameFolder) {
+                        gameList[0]=gameFolder.add(dummyButton2,'nothing').name("no games running");
+                    }
+                }
+            }
+        };
+        ajax.send();
+    }
+    function startGame() {
+        var ajax = new XMLHttpRequest();
+        ajax.open("GET", "startGame.php?GameName="+iGui.playerName);
+        ajax.onreadystatechange = function () {
+            if (ajax.readyState == 4) {
+                var events = ajax.responseXML.getElementsByTagName("status");
+                var nRows = events.length;
+                if(nRows>0) {
+                    if(event[0].getElementsByTagName("result")[0].innerHTML=="success") {
+                        var waitStartButton = {
+                            start: function () {
+
+                            }
+                        };
+                        gameStartButton = gui.add(waitStartButton, 'start').name("Press when ready");
+                    } else {
+                        confirm("Unable to start a new game");
+                    }
+                } else {
+                    confirm("Unable to start a new game");
+                }
+            }
+        };
+        ajax.send();
+    }
+
 }

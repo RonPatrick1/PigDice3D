@@ -10,8 +10,9 @@
 
 <div id="info">
 </div>
+<div id="mainContainer"></div>
 
-
+<script type="text/javascript" src="Other-Dat-GUI/dat-gui/build/dat.gui.js"></script>
 <script src="three.js"></script>
 <script src="GeometryUtils.js"></script>
 <script src="Detector.js"></script>
@@ -32,6 +33,35 @@
 <script src="js/postprocessing/BloomPass.js"></script>
 <script src="js/loaders/STLLoader.js"></script>
 <script type="text/javascript" src="physi.js"></script>
+<script type="text/javascript" src="Other-Dat-GUI/dat-gui/tests/jquery.js"></script>
+<!--script type="text/javascript" src="build/DAT.GUI.js"></script-->
+<!--script type="text/javascript" src="Other-Dat-GUI/dat-gui/src/dat/gui/GUI.js"></script>
+<script type="text/javascript" src="Other-Dat-GUI/dat-gui/utils/builder.js"></script>
+<script type="text/javascript" src="Other-Dat-GUI/dat-gui/utils/closure.js"></script>
+<script type="text/javascript" src="Other-Dat-GUI/dat-gui/utils/build_gui.js"></script>
+<script type="text/javascript" src="Other-Dat-GUI/dat-gui/utils/build_color.js"></script-->
+<!--script type="text/javascript" src="Other-Dat-GUI/dat-gui/src/dat/controllers/BooleanController.js"></script>
+<script type="text/javascript" src="Other-Dat-GUI/dat-gui/src/dat/controllers/ColorController.js"></script>
+<script type="text/javascript" src="Other-Dat-GUI/dat-gui/src/dat/controllers/Controller.js"></script>
+<script type="text/javascript" src="Other-Dat-GUI/dat-gui/src/dat/controllers/factory.js"></script>
+<script type="text/javascript" src="Other-Dat-GUI/dat-gui/src/dat/controllers/FunctionController.js"></script>
+<script type="text/javascript" src="Other-Dat-GUI/dat-gui/src/dat/controllers/NumberController.js"></script>
+<script type="text/javascript" src="Other-Dat-GUI/dat-gui/src/dat/controllers/NumberControllerBox.js"></script>
+<script type="text/javascript" src="Other-Dat-GUI/dat-gui/src/dat/controllers/NumberControllerSlider.js"></script>
+<script type="text/javascript" src="Other-Dat-GUI/dat-gui/src/dat/controllers/OptionController.js"></script>
+<script type="text/javascript" src="Other-Dat-GUI/dat-gui/src/dat/controllers/StringController.js"></script>
+<script type="text/javascript" src="Other-Dat-GUI/dat-gui/src/dat/color/Color.js"></script>
+<script type="text/javascript" src="Other-Dat-GUI/dat-gui/src/dat/color/interpret.js"></script>
+<script type="text/javascript" src="Other-Dat-GUI/dat-gui/src/dat/color/math.js"></script>
+<script type="text/javascript" src="Other-Dat-GUI/dat-gui/src/dat/color/toString.js"></script-->
+<!--link href='src/DAT/GUI/GUI.css' media='screen' rel='stylesheet' type='text/css'/-->
+<!--script type='text/javascript' src='src/DAT/GUI/GUI.js'></script>
+<script type='text/javascript' src='src/DAT/GUI/ControllerNumberSlider.js'></script>
+<script type='text/javascript' src='src/DAT/GUI/Controller.js'></script>
+<script type='text/javascript' src='src/DAT/GUI/ControllerBoolean.js'></script>
+<script type='text/javascript' src='src/DAT/GUI/ControllerString.js'></script>
+<script type='text/javascript' src='src/DAT/GUI/ControllerFunction.js'></script>
+<script-- type='text/javascript' src='src/DAT/GUI/ControllerNumber.js'></script-->
 <script src="MainScene.js"></script>
 
 <script id="fragment_shh" type="x-shader/x-fragment">
@@ -73,3 +103,4 @@ $doSomething=0;
 ?>
 </body>
 </html>
+

@@ -1,3 +1,8 @@
+/*  CIS 371 - Semester Project
+*   Ron Patrick
+*   Pig Dice 3D
+*/
+
 body {
     font-family: Monospace;
     background-color: #000;
@@ -22,4 +27,20 @@ body {
     font-weight: bold;
     text-decoration: underline;
     cursor: pointer
+}
+
+#hHeader {
+    font-weight: bold;
+    font-size: large;
+}
+.dg .title{
+    text-align: center;
+    font-weight: bold;
+}
+
+#gameMsg {
+    //font-weight: bold;
+    //line-height: 500px;
+    //color: rgba(255, 0, 0, 0.59);
+    color: white;
 }
